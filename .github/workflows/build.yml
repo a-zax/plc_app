@@ -13,15 +13,8 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    # Cache Python packages
-    - name: Cache Python packages
-      uses: actions/cache@v3
-      with:
-        path: ~/.cache/pip
-        key: python-pip-${{ hashFiles('**/requirements.txt') }}
-        restore-keys: python-pip-
-
-    - name: Install system dependencies
+    # Install system dependencies
+    - name: Install system packages
       run: |
         sudo apt-get update
         sudo apt-get install -y \
@@ -30,12 +23,13 @@ jobs:
           libtool pkg-config python3-pip python3-setuptools \
           python3-wheel python3-dev wget
 
-    - name: Install Buildozer and Python dependencies
+    # Install Buildozer & Cython
+    - name: Install Buildozer
       run: |
         python3 -m pip install --upgrade pip
         pip install buildozer==1.5.0 cython==0.29.36
 
-    # Cache Buildozer Android platform (SDK/NDK) for faster rebuilds
+    # Cache Buildozer Android platform to speed up rebuilds
     - name: Cache Buildozer Android platform
       uses: actions/cache@v3
       with:
@@ -43,10 +37,12 @@ jobs:
         key: buildozer-android-${{ runner.os }}-sdk34-ndk25b
         restore-keys: buildozer-android-
 
+    # Build APK automatically
     - name: Build APK with Buildozer
       run: |
         buildozer -v android debug
 
+    # Upload the APK as artifact
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
