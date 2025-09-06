@@ -59,50 +59,49 @@ class MainScreen(Screen):
         layout = BoxLayout(orientation="vertical", padding=15, spacing=15)
 
         # Title
-        title = Label(text="RWM Controller", font_size=28, bold=True, size_hint_y=None, height=50)
+        title = Label(text="RWM Controller", font_size=28, bold=True, size_hint_y=0.1)
         layout.add_widget(title)
 
         # Connection row
-        conn_row = BoxLayout(size_hint_y=None, height=50, spacing=10)
-        self.ip_input = TextInput(text="192.168.0.104", multiline=False, hint_text="PLC IP")
-        self.port_input = TextInput(text="502", multiline=False, input_filter="int")
-        self.connect_btn = Button(text="Connect", background_color=(0.2, 0.6, 1, 1), bold=True, on_press=self.connect_plc)
+        conn_row = BoxLayout(size_hint_y=0.1, spacing=10)
+        self.ip_input = TextInput(text="192.168.0.104", multiline=False, hint_text="PLC IP", size_hint_x=0.5)
+        self.port_input = TextInput(text="502", multiline=False, input_filter="int", size_hint_x=0.3)
+        self.connect_btn = Button(text="Connect", background_color=(0.2, 0.6, 1, 1), bold=True,
+                                  on_press=self.connect_plc, size_hint_x=0.2)
         conn_row.add_widget(self.ip_input)
         conn_row.add_widget(self.port_input)
         conn_row.add_widget(self.connect_btn)
 
         # Status
-        self.status = Label(text="Not connected", size_hint_y=None, height=30, font_size=16)
+        self.status = Label(text="Not connected", size_hint_y=0.05, font_size=16)
 
         # ----------- Controls Layout -----------
-        controls = BoxLayout(orientation="vertical", spacing=15)
+        controls = BoxLayout(orientation="vertical", spacing=10, size_hint_y=0.85)
 
         # --- D-Pad style ---
-        dpad = GridLayout(cols=3, spacing=10, size_hint_y=None, height=200)
+        dpad = GridLayout(cols=3, spacing=10, size_hint_y=0.25)
+        dpad.add_widget(Widget())
+        dpad.add_widget(Button(text="UP", size_hint=(1, 1), on_press=lambda x: self.send_cmd("%M601", 1)))
+        dpad.add_widget(Widget())
 
-        dpad.add_widget(Widget())  # empty left corner
-        dpad.add_widget(Button(text="UP", on_press=lambda x: self.send_cmd("%M601", 1)))
-        dpad.add_widget(Widget())  # empty right corner
+        dpad.add_widget(Button(text="LEFT", size_hint=(1, 1), on_press=lambda x: self.send_cmd("%M603", 1)))
+        dpad.add_widget(Widget())
+        dpad.add_widget(Button(text="RIGHT", size_hint=(1, 1), on_press=lambda x: self.send_cmd("%M604", 1)))
 
-        dpad.add_widget(Button(text="LEFT", on_press=lambda x: self.send_cmd("%M603", 1)))
-        dpad.add_widget(Widget())  # center empty
-        dpad.add_widget(Button(text="RIGHT", on_press=lambda x: self.send_cmd("%M604", 1)))
-
-        dpad.add_widget(Widget())  # empty bottom-left
-        dpad.add_widget(Button(text="DOWN", on_press=lambda x: self.send_cmd("%M602", 1)))
-        dpad.add_widget(Widget())  # empty bottom-right
+        dpad.add_widget(Widget())
+        dpad.add_widget(Button(text="DOWN", size_hint=(1, 1), on_press=lambda x: self.send_cmd("%M602", 1)))
+        dpad.add_widget(Widget())
 
         # --- Action buttons in grid ---
-        actions = GridLayout(cols=2, spacing=10, size_hint_y=None, height=240)
+        actions = GridLayout(cols=2, spacing=10, size_hint_y=0.5)
+        actions.add_widget(Button(text="Valve Open", size_hint=(1, 1), on_press=lambda x: self.send_cmd("%M607", 1)))
+        actions.add_widget(Button(text="Valve Close", size_hint=(1, 1), on_press=lambda x: self.send_cmd("%M608", 1)))
 
-        actions.add_widget(Button(text="Valve Open", on_press=lambda x: self.send_cmd("%M607", 1)))
-        actions.add_widget(Button(text="Valve Close", on_press=lambda x: self.send_cmd("%M608", 1)))
+        actions.add_widget(Button(text="Jet", size_hint=(1, 1), on_press=lambda x: self.send_cmd("%M605", 1)))
+        actions.add_widget(Button(text="Spray", size_hint=(1, 1), on_press=lambda x: self.send_cmd("%M606", 1)))
 
-        actions.add_widget(Button(text="Jet", on_press=lambda x: self.send_cmd("%M605", 1)))
-        actions.add_widget(Button(text="Spray", on_press=lambda x: self.send_cmd("%M606", 1)))
-
-        actions.add_widget(Button(text="Foam", on_press=lambda x: self.send_cmd("%M609", 1)))
-        actions.add_widget(Button(text="Reset", on_press=lambda x: self.send_cmd("%M610", 1)))
+        actions.add_widget(Button(text="Foam", size_hint=(1, 1), on_press=lambda x: self.send_cmd("%M609", 1)))
+        actions.add_widget(Button(text="Reset", size_hint=(1, 1), on_press=lambda x: self.send_cmd("%M610", 1)))
 
         # Timer button (full width)
         timer_btn = Button(text="Timer Start", background_color=(1, 0.3, 0.3, 1),
@@ -150,4 +149,3 @@ class PLCApp(App):
 
 if __name__ == "__main__":
     PLCApp().run()
-    
