@@ -13,36 +13,20 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    # Install system dependencies
     - name: Install system packages
       run: |
         sudo apt-get update
         sudo apt-get install -y \
-          openjdk-17-jdk unzip git zlib1g-dev libncurses6 libstdc++6 \
-          libffi-dev libssl-dev autoconf automake build-essential \
-          libtool pkg-config python3-pip python3-setuptools \
-          python3-wheel python3-dev wget
+          openjdk-17-jdk unzip git python3-pip python3-setuptools python3-wheel python3-dev build-essential
 
-    # Install Buildozer & Cython
-    - name: Install Buildozer
+    - name: Install Buildozer & Cython
       run: |
         python3 -m pip install --upgrade pip
         pip install buildozer==1.5.0 cython==0.29.36
 
-    # Cache Buildozer Android platform to speed up rebuilds
-    - name: Cache Buildozer Android platform
-      uses: actions/cache@v3
-      with:
-        path: ~/.buildozer/android/platform
-        key: buildozer-android-${{ runner.os }}-sdk34-ndk25b
-        restore-keys: buildozer-android-
+    - name: Build APK
+      run: buildozer -v android debug
 
-    # Build APK automatically
-    - name: Build APK with Buildozer
-      run: |
-        buildozer -v android debug
-
-    # Upload the APK as artifact
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
