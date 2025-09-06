@@ -27,11 +27,16 @@ jobs:
         python3 -m pip install --upgrade pip
         pip install buildozer cython==0.29.36
 
-    - name: Install Android SDK & NDK in Buildozer path
+    - name: Install Android SDK & NDK
       run: |
         # Create Buildozer platform directory
         mkdir -p ~/.buildozer/android/platform
         cd ~/.buildozer/android/platform
+
+        # Download and install NDK r25b (the version Buildozer wants)
+        wget https://dl.google.com/android/repository/android-ndk-r25b-linux.zip
+        unzip -q android-ndk-r25b-linux.zip
+        mv android-ndk-r25b android-ndk-r25b
 
         # Download command line tools
         wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline-tools.zip
@@ -39,27 +44,35 @@ jobs:
         mkdir -p android-sdk/cmdline-tools
         mv cmdline-tools android-sdk/cmdline-tools/latest
 
-        # Create symlink for Buildozer to find sdkmanager (tools/bin)
-        mkdir -p android-sdk/tools
-        ln -s $HOME/.buildozer/android/platform/android-sdk/cmdline-tools/latest android-sdk/tools/bin
-
         # Set environment variables
         export ANDROID_SDK_ROOT=$HOME/.buildozer/android/platform/android-sdk
-        export ANDROIDSDK=$ANDROID_SDK_ROOT
-        export ANDROIDNDK=$ANDROID_SDK_ROOT/ndk/25.1.8937393
+        export ANDROID_HOME=$ANDROID_SDK_ROOT
+        export ANDROID_NDK_HOME=$HOME/.buildozer/android/platform/android-ndk-r25b
         export PATH=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$PATH
 
         echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
-        echo "ANDROIDSDK=$ANDROIDSDK" >> $GITHUB_ENV
-        echo "ANDROIDNDK=$ANDROIDNDK" >> $GITHUB_ENV
+        echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
+        echo "ANDROID_NDK_HOME=$ANDROID_NDK_HOME" >> $GITHUB_ENV
         echo "PATH=$PATH" >> $GITHUB_ENV
 
         # Accept licenses and install required SDK packages
         yes | sdkmanager --licenses
-        sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0" "ndk;25.1.8937393"
+        sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+
+    - name: Configure Buildozer
+      run: |
+        # Initialize buildozer if spec doesn't exist
+        if [ ! -f buildozer.spec ]; then
+          buildozer init
+        fi
 
     - name: Build APK with Buildozer
       run: |
+        # Set environment variables for buildozer
+        export ANDROIDSDK="$ANDROID_SDK_ROOT"
+        export ANDROIDNDK="$ANDROID_NDK_HOME"
+        
+        # Build the APK
         buildozer -v android debug
 
     - name: Upload APK
