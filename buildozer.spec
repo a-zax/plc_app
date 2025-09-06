@@ -24,6 +24,8 @@ android.ndk_api = 21
 android.api = 34
 android.minapi = 21
 android.accept_sdk_license = True
+android.permissions = INTERNET
+
 
 # Force stable build-tools version
 android.build_tools_version = 34.0.0
