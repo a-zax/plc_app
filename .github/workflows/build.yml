@@ -48,7 +48,7 @@ jobs:
         mkdir -p ~/.buildozer/android/platform
         cd ~/.buildozer/android/platform
 
-        # Download command line tools if not already cached
+        # Download command line tools if not cached
         if [ ! -d "android-sdk/cmdline-tools/latest" ]; then
           wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline-tools.zip
           unzip cmdline-tools.zip
@@ -64,7 +64,7 @@ jobs:
         echo "ANDROIDNDK=$ANDROIDNDK" >> $GITHUB_ENV
         echo "PATH=$PATH" >> $GITHUB_ENV
 
-        # Accept licenses and install required packages
+        # Accept licenses & install required packages
         yes | sdkmanager --licenses
         sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0" "ndk;25.1.8937393"
 
