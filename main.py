@@ -1,9 +1,14 @@
-import socket
-from umodbus.client import tcp
-from kivy.clock import Clock
-from kivy.lang import Builder
+from kivy.app import App
 from kivy.uix.screenmanager import Screen, ScreenManager
-from kivymd.app import MDApp
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.label import Label
+from kivy.uix.textinput import TextInput
+from kivy.uix.button import Button
+from kivy.clock import Clock
+from kivy.uix.gridlayout import GridLayout
+from kivy.uix.widget import Widget
+import socket
+
 
 # ---------------- PLC CONNECTION CLASS ----------------
 class PLCConnection:
@@ -28,21 +33,9 @@ class PLCConnection:
         if not self._connected:
             if not self.openPLC():
                 return False
-
-        s = address.lower()
-        is_reg = s.startswith("%mw")
-
-        if is_reg:
-            _fn = tcp.write_single_register
-            dst = int(s.strip("%mw"))
-        else:
-            _fn = tcp.write_single_coil
-            dst = int(s.strip("%m"))
-            value = 0xFF00 if value != 0 else 0x0000
-
-        msg = _fn(slave_id=1, address=dst, value=value)
         try:
-            tcp.send_message(msg, self.sock)
+            msg = f"{address}:{value}".encode()
+            self.sock.sendall(msg)
             return True
         except Exception as e:
             print(f"Write error: {e}")
@@ -53,197 +46,108 @@ class PLCConnection:
         return self._connected
 
 
-# ---------------- UI DESIGN (KV Language) ----------------
-KV = """
-ScreenManager:
-    SplashScreen:
-    MainScreen:
-
-<SplashScreen>:
-    name: "splash"
-    MDBoxLayout:
-        orientation: "vertical"
-        md_bg_color: 0.1, 0.3, 0.6, 1
-        spacing: "20dp"
-        padding: "50dp"
-
-        MDLabel:
-            text: "PLC Controller"
-            theme_text_color: "Custom"
-            text_color: 1, 1, 1, 1
-            halign: "center"
-            font_style: "H4"
-
-        MDLabel:
-            text: "Loading..."
-            halign: "center"
-            theme_text_color: "Custom"
-            text_color: 1, 1, 1, 0.8
-
-<MainScreen>:
-    name: "main"
-    MDBoxLayout:
-        orientation: "vertical"
-        spacing: "10dp"
-        padding: "10dp"
-
-        MDTopAppBar:
-            title: "PLC Controller"
-            elevation: 4
-
-        MDCard:
-            orientation: "horizontal"
-            padding: "10dp"
-            spacing: "10dp"
-            size_hint_y: None
-            height: "80dp"
-
-            MDTextField:
-                id: ip_input
-                hint_text: "PLC IP"
-                text: "192.168.0.104"
-                mode: "rectangle"
-
-            MDTextField:
-                id: port_input
-                hint_text: "Port"
-                text: "502"
-                mode: "rectangle"
-                input_filter: "int"
-
-            MDRaisedButton:
-                id: connect_btn
-                text: "Connect"
-                md_bg_color: app.theme_cls.primary_color
-                on_release: app.connect_plc()
-
-        MDLabel:
-            id: status
-            text: "Not connected"
-            halign: "center"
-            theme_text_color: "Custom"
-            text_color: 1,0,0,1
-            size_hint_y: None
-            height: "40dp"
-
-        # ----------- D-Pad Layout -----------
-        MDBoxLayout:
-            orientation: "vertical"
-            size_hint_y: None
-            height: "200dp"
-            spacing: "10dp"
-
-            # UP
-            MDBoxLayout:
-                spacing: "10dp"
-                MDRaisedButton:
-                    text: "UP"
-                    size_hint_x: 0.4
-                    pos_hint: {"center_x": 0.5}
-                    on_release: app.send_cmd("%M601", 1)
-
-            # LEFT + RIGHT
-            MDBoxLayout:
-                spacing: "10dp"
-                MDRaisedButton:
-                    text: "LEFT"
-                    on_release: app.send_cmd("%M603", 1)
-                MDRaisedButton:
-                    text: "RIGHT"
-                    on_release: app.send_cmd("%M604", 1)
-
-            # DOWN
-            MDBoxLayout:
-                spacing: "10dp"
-                MDRaisedButton:
-                    text: "DOWN"
-                    size_hint_x: 0.4
-                    pos_hint: {"center_x": 0.5}
-                    on_release: app.send_cmd("%M602", 1)
-
-        # ----------- Other Controls -----------
-        MDGridLayout:
-            cols: 2
-            spacing: "10dp"
-            adaptive_height: True
-
-            MDRaisedButton:
-                text: "Valve Open"
-                on_release: app.send_cmd("%M607", 1)
-
-            MDRaisedButton:
-                text: "Valve Close"
-                on_release: app.send_cmd("%M608", 1)
-
-            MDRaisedButton:
-                text: "Jet"
-                on_release: app.send_cmd("%M605", 1)
-
-            MDRaisedButton:
-                text: "Spray"
-                on_release: app.send_cmd("%M606", 1)
-
-            MDRaisedButton:
-                text: "Foam"
-                on_release: app.send_cmd("%M609", 1)
-
-            MDRaisedButton:
-                text: "Reset"
-                on_release: app.send_cmd("%M610", 1)
-
-            MDRaisedButton:
-                text: "Timer Start"
-                md_bg_color: 1, 0, 0, 1
-                on_release: app.send_cmd("%M611", 1)
-"""
-
-
-# ---------------- MAIN APP ----------------
+# ---------------- SCREENS ----------------
 class SplashScreen(Screen):
-    pass
+    def on_enter(self):
+        Clock.schedule_once(lambda dt: setattr(self.manager, "current", "main"), 2)
 
 
 class MainScreen(Screen):
-    pass
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
+        layout = BoxLayout(orientation="vertical", padding=15, spacing=15)
 
-class PLCApp(MDApp):
-    def build(self):
-        self.theme_cls.primary_palette = "Blue"
-        self.plc = None
-        sm = Builder.load_string(KV)
+        # Title
+        title = Label(text="RWM Controller", font_size=28, bold=True, size_hint_y=None, height=50)
+        layout.add_widget(title)
 
-        # Switch to main screen after 2 seconds
-        Clock.schedule_once(lambda dt: setattr(sm, "current", "main"), 2)
-        return sm
+        # Connection row
+        conn_row = BoxLayout(size_hint_y=None, height=50, spacing=10)
+        self.ip_input = TextInput(text="192.168.0.104", multiline=False, hint_text="PLC IP")
+        self.port_input = TextInput(text="502", multiline=False, input_filter="int")
+        self.connect_btn = Button(text="Connect", background_color=(0.2, 0.6, 1, 1), bold=True, on_press=self.connect_plc)
+        conn_row.add_widget(self.ip_input)
+        conn_row.add_widget(self.port_input)
+        conn_row.add_widget(self.connect_btn)
 
-    def connect_plc(self):
-        ip = self.root.get_screen("main").ids.ip_input.text.strip()
-        port = int(self.root.get_screen("main").ids.port_input.text.strip())
+        # Status
+        self.status = Label(text="Not connected", size_hint_y=None, height=30, font_size=16)
+
+        # ----------- Controls Layout -----------
+        controls = BoxLayout(orientation="vertical", spacing=15)
+
+        # --- D-Pad style ---
+        dpad = GridLayout(cols=3, spacing=10, size_hint_y=None, height=200)
+
+        dpad.add_widget(Widget())  # empty left corner
+        dpad.add_widget(Button(text="UP", on_press=lambda x: self.send_cmd("%M601", 1)))
+        dpad.add_widget(Widget())  # empty right corner
+
+        dpad.add_widget(Button(text="LEFT", on_press=lambda x: self.send_cmd("%M603", 1)))
+        dpad.add_widget(Widget())  # center empty
+        dpad.add_widget(Button(text="RIGHT", on_press=lambda x: self.send_cmd("%M604", 1)))
+
+        dpad.add_widget(Widget())  # empty bottom-left
+        dpad.add_widget(Button(text="DOWN", on_press=lambda x: self.send_cmd("%M602", 1)))
+        dpad.add_widget(Widget())  # empty bottom-right
+
+        # --- Action buttons in grid ---
+        actions = GridLayout(cols=2, spacing=10, size_hint_y=None, height=240)
+
+        actions.add_widget(Button(text="Valve Open", on_press=lambda x: self.send_cmd("%M607", 1)))
+        actions.add_widget(Button(text="Valve Close", on_press=lambda x: self.send_cmd("%M608", 1)))
+
+        actions.add_widget(Button(text="Jet", on_press=lambda x: self.send_cmd("%M605", 1)))
+        actions.add_widget(Button(text="Spray", on_press=lambda x: self.send_cmd("%M606", 1)))
+
+        actions.add_widget(Button(text="Foam", on_press=lambda x: self.send_cmd("%M609", 1)))
+        actions.add_widget(Button(text="Reset", on_press=lambda x: self.send_cmd("%M610", 1)))
+
+        # Timer button (full width)
+        timer_btn = Button(text="Timer Start", background_color=(1, 0.3, 0.3, 1),
+                           size_hint_y=None, height=50, on_press=lambda x: self.send_cmd("%M611", 1))
+
+        # Add to layout
+        controls.add_widget(dpad)
+        controls.add_widget(actions)
+        controls.add_widget(timer_btn)
+
+        layout.add_widget(conn_row)
+        layout.add_widget(self.status)
+        layout.add_widget(controls)
+        self.add_widget(layout)
+
+    def connect_plc(self, instance):
+        ip = self.ip_input.text.strip()
+        port = int(self.port_input.text.strip())
         self.plc = PLCConnection(ip, port)
 
-        status_label = self.root.get_screen("main").ids.status
         if self.plc.openPLC():
-            status_label.text = f"Connected to {ip}:{port}"
-            status_label.text_color = (0, 0.7, 0, 1)
+            self.status.text = f"Connected to {ip}:{port}"
         else:
-            status_label.text = "Connection failed"
-            status_label.text_color = (1, 0, 0, 1)
+            self.status.text = "Connection failed"
 
     def send_cmd(self, reg, val):
-        status_label = self.root.get_screen("main").ids.status
-        if self.plc and self.plc.is_connected():
+        if hasattr(self, "plc") and self.plc.is_connected():
             ok = self.plc.writePLC(reg, val)
             if ok:
-                status_label.text = f"Sent {val} → {reg}"
-                status_label.text_color = (0, 0.7, 0, 1)
+                self.status.text = f"Sent {val} → {reg}"
             else:
-                status_label.text = "Failed to send"
-                status_label.text_color = (1, 0, 0, 1)
+                self.status.text = "Failed to send"
         else:
-            status_label.text = "Not connected"
-            status_label.text_color = (1, 0, 0, 1)
+            self.status.text = "Not connected"
+
+
+# ---------------- APP ----------------
+class PLCApp(App):
+    def build(self):
+        sm = ScreenManager()
+        sm.add_widget(SplashScreen(name="splash"))
+        sm.add_widget(MainScreen(name="main"))
+        return sm
 
 
 if __name__ == "__main__":
     PLCApp().run()
+    
