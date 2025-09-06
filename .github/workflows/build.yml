@@ -30,43 +30,18 @@ jobs:
           libtool pkg-config python3-pip python3-setuptools \
           python3-wheel python3-dev wget
 
-    - name: Install Buildozer 1.5.0 and Python dependencies
+    - name: Install Buildozer and Python dependencies
       run: |
         python3 -m pip install --upgrade pip
         pip install buildozer==1.5.0 cython==0.29.36
 
-    # Cache Buildozer Android platform (SDK/NDK)
+    # Cache Buildozer Android platform (SDK/NDK) for faster rebuilds
     - name: Cache Buildozer Android platform
       uses: actions/cache@v3
       with:
         path: ~/.buildozer/android/platform
         key: buildozer-android-${{ runner.os }}-sdk34-ndk25b
         restore-keys: buildozer-android-
-
-    - name: Install Android SDK & NDK
-      run: |
-        mkdir -p ~/.buildozer/android/platform
-        cd ~/.buildozer/android/platform
-
-        # Download command line tools if not cached
-        if [ ! -d "android-sdk/cmdline-tools/latest" ]; then
-          wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline-tools.zip
-          unzip cmdline-tools.zip
-          mkdir -p android-sdk/cmdline-tools
-          mv cmdline-tools android-sdk/cmdline-tools/latest
-        fi
-
-        export ANDROIDSDK=$HOME/.buildozer/android/platform/android-sdk
-        export ANDROIDNDK=$ANDROIDSDK/ndk/25.1.8937393
-        export PATH=$ANDROIDSDK/cmdline-tools/latest/bin:$ANDROIDSDK/platform-tools:$PATH
-
-        echo "ANDROIDSDK=$ANDROIDSDK" >> $GITHUB_ENV
-        echo "ANDROIDNDK=$ANDROIDNDK" >> $GITHUB_ENV
-        echo "PATH=$PATH" >> $GITHUB_ENV
-
-        # Accept licenses & install required packages
-        yes | sdkmanager --licenses
-        sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0" "ndk;25.1.8937393"
 
     - name: Build APK with Buildozer
       run: |
