@@ -20,16 +20,29 @@ jobs:
           openjdk-17-jdk unzip git zlib1g-dev libncurses6 libstdc++6 \
           libffi-dev libssl-dev autoconf automake build-essential \
           libtool pkg-config python3-pip python3-setuptools \
-          python3-wheel python3-dev
+          python3-wheel python3-dev wget
 
-    - name: Install Python deps
+    - name: Install Python dependencies
       run: |
         python3 -m pip install --upgrade pip
         pip install buildozer cython==0.29.36
 
-    - name: Install Android SDK & accept licenses
+    - name: Install Android SDK & NDK
       run: |
-        yes | sdkmanager --licenses || true
+        # Download command line tools
+        wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline-tools.zip
+        mkdir -p $HOME/Android/cmdline-tools
+        unzip cmdline-tools.zip -d $HOME/Android/cmdline-tools
+        mv $HOME/Android/cmdline-tools/cmdline-tools $HOME/Android/cmdline-tools/latest
+
+        # Set environment variables
+        echo "export ANDROID_SDK_ROOT=$HOME/Android" >> $GITHUB_ENV
+        echo "export PATH=$HOME/Android/cmdline-tools/latest/bin:$HOME/Android/platform-tools:\$PATH" >> $GITHUB_ENV
+        export ANDROID_SDK_ROOT=$HOME/Android
+        export PATH=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$PATH
+
+        # Accept licenses and install required SDK/NDK packages
+        yes | sdkmanager --licenses
         sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0" "ndk;25.1.8937393"
 
     - name: Build APK with Buildozer
